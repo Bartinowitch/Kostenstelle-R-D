@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Kostenstellen Übersicht</title>
+<style>
+:root{
+  --s-blue-dark:#1c3664;
+  --s-blue-mid:#1a5276;
+  --s-blue-light:#2e86c1;
+  --s-blue-pale:#d6eaf8;
+  --s-bg:#f4f6f8;
+  --s-text-primary:#1a1a2e;
+  --s-text-muted:#5d6d7e;
+  --s-border:#d5d8dc;
+  --s-red:#c0392b;
+  --s-green:#1e8449;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  font-family:"Segoe UI",Tahoma,Arial,sans-serif;
+  background:var(--s-bg);
+  color:var(--s-text-primary);
+  padding:24px;
+}
+.header-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:14px;
+  position:relative;
+}
+h1{
+  font-size:20px;
+  color:var(--s-blue-dark);
+  margin:0;
+}
+.menu-wrap{ position:relative; }
+.menu-btn{
+  padding:8px 14px;
+  border:1px solid var(--s-blue-mid);
+  background:#fff;
+  color:var(--s-blue-mid);
+  border-radius:4px;
+  font-size:13px;
+  cursor:pointer;
+}
+.menu-btn:hover{ background:var(--s-blue-pale); }
+.sync-panel{
+  display:none;
+  position:absolute;
+  right:0;
+  top:calc(100% + 6px);
+  background:#fff;
+  border:1px solid var(--s-border);
+  border-radius:8px;
+  padding:14px;
+  width:360px;
+  box-shadow:0 4px 16px rgba(0,0,0,0.12);
+  z-index:20;
+}
+.sync-panel.open{ display:block; }
+.sync-panel label{
+  font-size:12px;
+  color:var(--s-text-muted);
+  display:block;
+  margin-bottom:4px;
+}
+.sync-panel input[type="text"]{
+  width:100%;
+  padding:7px 10px;
+  border:1px solid var(--s-border);
+  border-radius:4px;
+  font-size:13px;
+  margin-bottom:8px;
+}
+.sync-panel .btn-row{
+  display:flex;
+  gap:8px;
+  margin-bottom:8px;
+}
+.sync-panel button{
+  padding:7px 12px;
+  border:1px solid var(--s-blue-mid);
+  background:var(--s-blue-mid);
+  color:#fff;
+  border-radius:4px;
+  font-size:13px;
+  cursor:pointer;
+}
+.sync-panel button.secondary{
+  background:#fff;
+  color:var(--s-blue-mid);
+}
+.sync-status{
+  font-size:12px;
+  color:var(--s-text-muted);
+  display:block;
+}
+.sync-status.ok{ color:var(--s-green); }
+.sync-status.error{ color:var(--s-red); }
+.sync-status.busy{ color:var(--s-blue-mid); }
+.count{
+  font-size:13px;
+  color:var(--s-text-muted);
+  margin-bottom:8px;
+}
+.table-wrap{
+  background:#fff;
+  border:1px solid var(--s-border);
+  border-radius:8px;
+  overflow:hidden;
+}
+table{
+  border-collapse:collapse;
+  width:100%;
+  font-size:13px;
+}
+thead th{
+  background:var(--s-blue-pale);
+  color:var(--s-blue-dark);
+  text-align:left;
+  padding:8px;
+  cursor:pointer;
+  user-select:none;
+  position:sticky;
+  top:0;
+  border-bottom:1px solid var(--s-blue-light);
+  white-space:nowrap;
+}
+thead th:hover{ background:#c3e0f5; }
+thead th .arrow{ font-size:10px; color:var(--s-blue-mid); margin-left:4px; }
+thead tr.filter-row th{
+  cursor:default;
+  padding:5px 6px;
+  position:sticky;
+  top:34px;
+  border-bottom:2px solid var(--s-blue-light);
+}
+thead tr.filter-row input,
+thead tr.filter-row select{
+  width:100%;
+  font-size:12px;
+  padding:4px 5px;
+  border:1px solid var(--s-border);
+  border-radius:4px;
+  font-weight:normal;
+  color:var(--s-text-primary);
+  background:#fff;
+}
+tbody td{
+  padding:8px;
+  border-bottom:1px solid var(--s-border);
+  white-space:nowrap;
+}
+tbody tr:hover{ background:var(--s-bg); }
+tbody tr:nth-child(even){ background:#fafbfc; }
+tbody tr:nth-child(even):hover{ background:var(--s-bg); }
+.kart-E{ color:var(--s-blue-mid); font-weight:600; }
+.kart-H{ color:var(--s-blue-dark); font-weight:600; }
+.kart-F{ color:var(--s-green); font-weight:600; }
+.kart-G{ color:var(--s-red); font-weight:600; }
+.no-results{
+  padding:24px;
+  text-align:center;
+  color:var(--s-text-muted);
+}
+.table-scroll{
+  max-height:70vh;
+  overflow:auto;
+}
+.edit-input{
+  width:130px;
+  padding:4px 6px;
+  border:1px solid var(--s-border);
+  border-radius:4px;
+  font-size:13px;
+}
+</style>
+</head>
+<body>
+
+<div class="header-row">
+  <h1>Kostenstellen Übersicht</h1>
+  <div class="menu-wrap">
+    <button class="menu-btn" id="menuBtn">⚙ Sync Settings</button>
+    <div class="sync-panel" id="syncPanel">
+      <label for="sheetUrl">Apps Script Web-App URL</label>
+      <input type="text" id="sheetUrl" placeholder=".../exec" value="https://script.google.com/macros/s/AKfycbz1e1zsmVh4fvkDSbg9NOpQkKTLFM03qWj2EQuvIjPVGbMgE2OMSrLnQvTR4s45cu0s/exec">
+      <div class="btn-row">
+        <button id="connectBtn">Verbinden</button>
+        <button class="secondary" id="reloadBtn">Neu laden</button>
+      </div>
+      <span id="syncStatus" class="sync-status">nicht verbunden</span>
+    </div>
+  </div>
+</div>
+
+<div class="count" id="count"></div>
+
+<div class="table-wrap">
+  <div class="table-scroll">
+    <table id="table">
+      <thead>
+        <tr>
+          <th data-key="kostenst">Kostenst. <span class="arrow"></span></th>
+          <th data-key="kkrs">KKrs <span class="arrow"></span></th>
+          <th data-key="bukr">BuKr <span class="arrow"></span></th>
+          <th data-key="kart" title="9=Verrech.Kostenstelle, E=Entwicklung, F=Fertigung, G=Logistik, H=Hilfskostenstelle, L=Leitung, M=Material, S=Soziales, V=Vertrieb, W=Verwaltung">KArt <span class="arrow"></span></th>
+          <th data-key="verantwortlicher">Verantwortlicher <span class="arrow"></span></th>
+          <th data-key="verantwben">VerantwBen <span class="arrow"></span></th>
+          <th data-key="kurztext">Kurztext <span class="arrow"></span></th>
+          <th data-key="sprache">Sprache <span class="arrow"></span></th>
+          <th data-key="gueltigab">Gültig ab <span class="arrow"></span></th>
+          <th data-key="bis">bis <span class="arrow"></span></th>
+          <th data-key="aktiv">Aktiv? <span class="arrow"></span></th>
+          <th data-key="neuerVerantw">Neuer Verantwortlicher <span class="arrow"></span></th>
+          <th data-key="neuerKkrs" title="Falls der KKrs nicht mehr stimmt: korrekten Kostenrechnungskreis hier eintragen.">Korrekter KKrs <span class="arrow"></span></th>
+        </tr>
+        <tr class="filter-row" id="filterRow"></tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const kartLegend = {
+  "9":"Verrech.Kostenstelle",
+  "E":"Entwicklung",
+  "F":"Fertigung",
+  "G":"Logistik",
+  "H":"Hilfskostenstelle",
+  "L":"Leitung",
+  "M":"Material",
+  "S":"Soziales",
+  "V":"Vertrieb",
+  "W":"Verwaltung"
+};
+
+const data = [
+{kostenst:"1608",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"A. Roos",verantwben:"ROOSAA",kurztext:"ELECTRICAL SUPPORT",sprache:"DE",gueltigab:"01.01.2025",bis:"31.12.9999"},
+{kostenst:"1611",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"A. Rohner",verantwben:"ROHNERAL",kurztext:"TOOL DESIGN",sprache:"DE",gueltigab:"01.01.2025",bis:"31.12.9999"},
+{kostenst:"1612",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"M. Hug",verantwben:"HUGMA",kurztext:"AUTOMATION DESIGN",sprache:"DE",gueltigab:"01.09.2024",bis:"31.12.9999"},
+{kostenst:"1615",kkrs:"1010",bukr:"1010",kart:"F",verantwortlicher:"F. Thali",verantwben:"THALIFA",kurztext:"PART MANUFACTURING",sprache:"DE",gueltigab:"01.01.2025",bis:"31.12.9999"},
+{kostenst:"1616",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"A. Vahl",verantwben:"VAHLAR",kurztext:"MAINTENANCE",sprache:"DE",gueltigab:"01.11.2021",bis:"31.12.9999"},
+{kostenst:"1700",kkrs:"1010",bukr:"1010",kart:"H",verantwortlicher:"B. Zemp",verantwben:"ZEMPBR",kurztext:"GLOBAL ENGINEERING",sprache:"DE",gueltigab:"01.06.2024",bis:"31.12.9999"},
+{kostenst:"1701",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"B. Ismaili",verantwben:"ISMAILBE",kurztext:"ENGINEERING CONNECT.",sprache:"DE",gueltigab:"01.08.2022",bis:"31.12.9999"},
+{kostenst:"1702",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"A. Hoti",verantwben:"HOTIAR",kurztext:"ENGINEERING FUSES",sprache:"DE",gueltigab:"01.01.2025",bis:"31.12.9999"},
+{kostenst:"1703",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"T. Nietlisbach",verantwben:"NIETLITI",kurztext:"PROTOTYPING",sprache:"DE",gueltigab:"01.09.2021",bis:"31.12.9999"},
+{kostenst:"1704",kkrs:"1010",bukr:"1010",kart:"H",verantwortlicher:"Abdessamad Mobarraa",verantwben:"MOBARRAB",kurztext:"STANDARDS, APPROVALS",sprache:"DE",gueltigab:"01.01.2026",bis:"31.12.9999"},
+{kostenst:"1705",kkrs:"1010",bukr:"1010",kart:"H",verantwortlicher:"P. Straub",verantwben:"STRAUBPE",kurztext:"GERÄTESCHUTZSCHALTER",sprache:"DE",gueltigab:"01.10.2017",bis:"31.12.9999"},
+{kostenst:"1706",kkrs:"1010",bukr:"1010",kart:"H",verantwortlicher:"T. Nietlisbach",verantwben:"NIETLITI",kurztext:"MEASUREMENT & TEST",sprache:"DE",gueltigab:"01.06.2019",bis:"31.12.9999"},
+{kostenst:"1707",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"M. Halter",verantwben:"HALTERMA",kurztext:"ENGINEERING SWITCHES",sprache:"DE",gueltigab:"01.01.2021",bis:"31.12.9999"},
+{kostenst:"1708",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"B. Zemp",verantwben:"ZEMPBR",kurztext:"ADVANCED ENGINEERING",sprache:"DE",gueltigab:"01.01.2017",bis:"31.12.9999"},
+{kostenst:"1709",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"J. Bachmann",verantwben:"BACHMAJO",kurztext:"ENGINEERING SAG",sprache:"DE",gueltigab:"01.11.2020",bis:"31.12.9999"},
+{kostenst:"1710",kkrs:"1010",bukr:"1010",kart:"F",verantwortlicher:"CH. Titz",verantwben:"TITZCH",kurztext:"CHECK/PACKING LOGIST",sprache:"DE",gueltigab:"01.01.2025",bis:"31.12.9999"},
+{kostenst:"1711",kkrs:"1010",bukr:"1010",kart:"G",verantwortlicher:"R. Portmann",verantwben:"PORTMARO",kurztext:"WARENEINGANG",sprache:"DE",gueltigab:"01.11.2009",bis:"31.12.9999"},
+{kostenst:"1712",kkrs:"1010",bukr:"1010",kart:"H",verantwortlicher:"M. Oberholzer",verantwben:"OBERHOMA",kurztext:"ENGINEERING PROJECTS",sprache:"DE",gueltigab:"01.01.2022",bis:"31.12.9999"},
+{kostenst:"1713",kkrs:"1010",bukr:"1010",kart:"F",verantwortlicher:"L. Della Ca",verantwben:"DELLACLU",kurztext:"FINAL TEST",sprache:"DE",gueltigab:"01.01.2023",bis:"31.12.9999"},
+{kostenst:"1714",kkrs:"1010",bukr:"1010",kart:"F",verantwortlicher:"P. Puskaric",verantwben:"PUSKARDA",kurztext:"TESTING FUSE CENTER",sprache:"DE",gueltigab:"01.01.2025",bis:"31.12.9999"},
+{kostenst:"1715",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"M. Bottin",verantwben:"BOTTINMA",kurztext:"ENGINEERING EMC SAGL",sprache:"DE",gueltigab:"01.01.2024",bis:"31.12.9999"},
+{kostenst:"1750",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"S. Maiocchi",verantwben:"MAIOCCSI",kurztext:"EMS ENGINEERING",sprache:"DE",gueltigab:"01.10.2019",bis:"31.12.9999"},
+{kostenst:"1751",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"S. Pellegrini",verantwben:"PELLEGSI",kurztext:"EMC ENGINEERING",sprache:"DE",gueltigab:"01.10.2019",bis:"31.12.9999"},
+{kostenst:"1752",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"S. Maiocchi",verantwben:"MAIOCCSI",kurztext:"EMS COMPONENT ENGINE",sprache:"DE",gueltigab:"01.09.2023",bis:"31.12.9999"},
+{kostenst:"1760",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"M. Zanini",verantwben:"ZANINIMA",kurztext:"EMC SUPPORT TECHNIC",sprache:"DE",gueltigab:"01.01.2021",bis:"31.12.9999"},
+{kostenst:"1761",kkrs:"1010",bukr:"1010",kart:"H",verantwortlicher:"R. Lang",verantwben:"LANGRO",kurztext:"R&D MECHANICAL",sprache:"DE",gueltigab:"01.01.2025",bis:"31.12.9999"},
+{kostenst:"1762",kkrs:"1010",bukr:"1010",kart:"H",verantwortlicher:"F. Rescalli",verantwben:"RESCALFA",kurztext:"R&D ELECTRICAL",sprache:"DE",gueltigab:"01.01.2025",bis:"31.12.9999"},
+{kostenst:"1763",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"M. Hug",verantwben:"HUGMA",kurztext:"R&D AUTOMATION & PRO",sprache:"DE",gueltigab:"01.01.2025",bis:"31.12.9999"},
+{kostenst:"1764",kkrs:"1010",bukr:"1010",kart:"H",verantwortlicher:"M. Alig",verantwben:"ALIGMA",kurztext:"R&D PRODUCTS",sprache:"DE",gueltigab:"01.01.2025",bis:"31.12.9999"},
+{kostenst:"1765",kkrs:"1010",bukr:"1010",kart:"H",verantwortlicher:"J. Bachmann",verantwben:"BACHMAJO",kurztext:"R&D SSRO",sprache:"DE",gueltigab:"01.01.2025",bis:"31.12.9999"},
+{kostenst:"1790",kkrs:"1010",bukr:"1010",kart:"H",verantwortlicher:"B. Zemp",verantwben:"ZEMPBR",kurztext:"DIGITAL SERVICES",sprache:"DE",gueltigab:"01.06.2024",bis:"31.12.9999"},
+{kostenst:"1799",kkrs:"1010",bukr:"1010",kart:"H",verantwortlicher:"M. Bucher",verantwben:"BUCHERMA",kurztext:"CHARGING DEVELOPMENT",sprache:"DE",gueltigab:"01.01.2025",bis:"31.12.9999"},
+{kostenst:"1801",kkrs:"1010",bukr:"1010",kart:"G",verantwortlicher:"J. Fehrenbach",verantwben:"FEHRENJO",kurztext:"PROCUREMENT",sprache:"DE",gueltigab:"01.08.2025",bis:"31.12.9999"},
+{kostenst:"1802",kkrs:"1010",bukr:"1010",kart:"G",verantwortlicher:"S. Eidenberger",verantwben:"EIDENBSO",kurztext:"EMS PROCUREMENT",sprache:"DE",gueltigab:"01.10.2019",bis:"31.12.9999"},
+{kostenst:"1803",kkrs:"1010",bukr:"1010",kart:"G",verantwortlicher:"R. Lorefice",verantwben:"LOREFIRO",kurztext:"WAREHOUSE SEMI-FINIS",sprache:"DE",gueltigab:"01.07.2020",bis:"31.12.9999"},
+{kostenst:"1804",kkrs:"1010",bukr:"1010",kart:"G",verantwortlicher:"M. Besard",verantwben:"BESARDMI",kurztext:"EMC PROCUREMENT",sprache:"DE",gueltigab:"01.08.2025",bis:"31.12.9999"},
+{kostenst:"1850",kkrs:"1010",bukr:"1010",kart:"G",verantwortlicher:"S. Granturco",verantwben:"GRANTUSA",kurztext:"EMS WAREHOUSE-LOGIST",sprache:"DE",gueltigab:"01.09.2022",bis:"31.12.9999"},
+{kostenst:"1851",kkrs:"1010",bukr:"1010",kart:"G",verantwortlicher:"M. Besard",verantwben:"BESARDMI",kurztext:"EMC WAREHOUSE-LOGIST",sprache:"DE",gueltigab:"01.08.2025",bis:"31.12.9999"},
+{kostenst:"2000",kkrs:"1010",bukr:"1010",kart:"H",verantwortlicher:"O. Fiegl",verantwben:"FIEGLOS",kurztext:"GLOBAL OPERATIONS MA",sprache:"DE",gueltigab:"01.01.2019",bis:"31.12.9999"},
+{kostenst:"2001",kkrs:"1010",bukr:"1010",kart:"H",verantwortlicher:"R. Schumacher",verantwben:"SCHUMARO",kurztext:"MANAGEMENT MANUFACTR",sprache:"DE",gueltigab:"01.10.2019",bis:"31.12.9999"},
+{kostenst:"2002",kkrs:"1010",bukr:"1010",kart:"H",verantwortlicher:"M. Schär",verantwben:"SCHAERMA",kurztext:"STAMPING",sprache:"DE",gueltigab:"01.01.2025",bis:"31.12.9999"},
+{kostenst:"2003",kkrs:"1010",bukr:"1010",kart:"H",verantwortlicher:"A. Bütler",verantwben:"BUETLECO",kurztext:"CUSTOMER SERVICE EXP",sprache:"DE",gueltigab:"01.06.2023",bis:"31.12.9999"},
+{kostenst:"2010",kkrs:"1010",bukr:"1010",kart:"H",verantwortlicher:"A. Mesaros",verantwben:"MESAROAN",kurztext:"INJECTION MOLD SER.",sprache:"DE",gueltigab:"01.01.2025",bis:"31.12.9999"},
+{kostenst:"2011",kkrs:"1010",bukr:"1010",kart:"H",verantwortlicher:"C. Titz",verantwben:"TITZCH",kurztext:"KUNSTSTOFF-HALBAUT.I",sprache:"DE",gueltigab:"01.01.2013",bis:"31.12.9999"},
+{kostenst:"2013",kkrs:"1010",bukr:"1010",kart:"F",verantwortlicher:"C. Titz",verantwben:"TITZCH",kurztext:"FPG INJECTION MOLD.",sprache:"DE",gueltigab:"01.01.2019",bis:"31.12.9999"},
+{kostenst:"1503",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"B. Häcki",verantwben:"HAECKIBE",kurztext:"VOCATIONAL TRAINING",sprache:"DE",gueltigab:"01.01.2019",bis:"31.12.9999"},
+{kostenst:"1562",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"M. Besard",verantwben:"BESARDMI",kurztext:"EMC PROCESS ENGINEER",sprache:"DE",gueltigab:"01.08.2025",bis:"31.12.9999"},
+{kostenst:"1603",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"M. Bieri",verantwben:"BIERIMA",kurztext:"TOOL ASSEMBLING",sprache:"DE",gueltigab:"01.01.2019",bis:"31.12.9999"},
+{kostenst:"1604",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"A. Schürmann",verantwben:"SCHUERAN",kurztext:"AUTOMATION",sprache:"DE",gueltigab:"01.01.2025",bis:"31.12.9999"},
+{kostenst:"1605",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"M. Bieri",verantwben:"BIERIMA",kurztext:"FRÄSEN/DREHEN",sprache:"DE",gueltigab:"01.01.2000",bis:"31.12.9999"},
+{kostenst:"1606",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"M. Bieri",verantwben:"BIERIMA",kurztext:"SCHLEIFEN",sprache:"DE",gueltigab:"01.01.2000",bis:"31.12.9999"},
+{kostenst:"1607",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"M. Bieri",verantwben:"BIERIMA",kurztext:"ERODIEREN",sprache:"DE",gueltigab:"01.01.2000",bis:"31.12.9999"},
+{kostenst:"2610",kkrs:"1010",bukr:"1010",kart:"E",verantwortlicher:"S. Brugnoli",verantwben:"BRUGNOSE",kurztext:"PRODUCTION COST IMPR",sprache:"DE",gueltigab:"01.11.2025",bis:"31.12.9999"},
+{kostenst:"3200",kkrs:"1020",bukr:"1020",kart:"E",verantwortlicher:"S. Schillinger",verantwben:"",kurztext:"ELECTR. ENGINEERING",sprache:"DE",gueltigab:"01.12.2007",bis:"31.12.9999"},
+{kostenst:"3200",kkrs:"1140",bukr:"1140",kart:"E",verantwortlicher:"Andre Borneman",verantwben:"",kurztext:"ENGINEERING AND R&D",sprache:"DE",gueltigab:"01.05.2017",bis:"31.12.9999"},
+{kostenst:"3210",kkrs:"1020",bukr:"1020",kart:"E",verantwortlicher:"S. Schillinger",verantwben:"",kurztext:"PROCESS ENGINEERING",sprache:"DE",gueltigab:"01.12.2007",bis:"31.12.9999"},
+{kostenst:"3220",kkrs:"1020",bukr:"1020",kart:"E",verantwortlicher:"Burger T.",verantwben:"",kurztext:"MECH. FERTIGUNG",sprache:"DE",gueltigab:"01.12.2007",bis:"31.12.9999"},
+{kostenst:"3220",kkrs:"1140",bukr:"1140",kart:"E",verantwortlicher:"Andre Borneman",verantwben:"",kurztext:"EL ENGINEERING",sprache:"DE",gueltigab:"01.05.2017",bis:"31.12.9999"},
+{kostenst:"3230",kkrs:"1020",bukr:"1020",kart:"E",verantwortlicher:"S. Schillinger",verantwben:"",kurztext:"MECH. ENGINEERING",sprache:"DE",gueltigab:"01.12.2007",bis:"31.12.9999"},
+{kostenst:"3380",kkrs:"1140",bukr:"1140",kart:"E",verantwortlicher:"Andre Borneman",verantwben:"",kurztext:"PROTOSHOP",sprache:"DE",gueltigab:"01.05.2017",bis:"31.12.9999"},
+{kostenst:"4100",kkrs:"1080",bukr:"1080",kart:"E",verantwortlicher:"Hädener Peter",verantwben:"",kurztext:"PK KONSTRUKTION",sprache:"DE",gueltigab:"01.01.2024",bis:"31.12.9999"},
+{kostenst:"8310",kkrs:"1020",bukr:"1020",kart:"E",verantwortlicher:"HERR WAIBEL",verantwben:"",kurztext:"ENTWICKLUNG",sprache:"DE",gueltigab:"01.01.2001",bis:"31.12.9999"},
+{kostenst:"8311",kkrs:"1020",bukr:"1020",kart:"E",verantwortlicher:"HERR DIETRICH",verantwben:"",kurztext:"ENTW. LIZENZ BT",sprache:"DE",gueltigab:"01.01.2001",bis:"31.12.9999"},
+{kostenst:"8315",kkrs:"1020",bukr:"1020",kart:"E",verantwortlicher:"HERR WAIBEL",verantwben:"",kurztext:"ENTWICKLUNG -FEM",sprache:"DE",gueltigab:"01.01.2001",bis:"31.12.9999"},
+{kostenst:"8320",kkrs:"1020",bukr:"1020",kart:"E",verantwortlicher:"HERR WAIBEL",verantwben:"",kurztext:"ENTWICKLUNG-ELEKTR",sprache:"DE",gueltigab:"01.01.2001",bis:"31.12.9999"},
+{kostenst:"8325",kkrs:"1020",bukr:"1020",kart:"E",verantwortlicher:"HERR WAIBEL",verantwben:"",kurztext:"ENTWICKLUNG-AVT",sprache:"DE",gueltigab:"01.01.2001",bis:"31.12.9999"},
+{kostenst:"8350",kkrs:"1020",bukr:"1020",kart:"E",verantwortlicher:"HERR HELBLING",verantwben:"",kurztext:"PROJEKTIERUNG TS",sprache:"DE",gueltigab:"01.01.2001",bis:"31.12.9999"},
+{kostenst:"V80001750",kkrs:"1010",bukr:"8017",kart:"E",verantwortlicher:"S. Maiocchi",verantwben:"MAIOCCSI",kurztext:"EMS ENGINEERING",sprache:"DE",gueltigab:"01.10.2019",bis:"31.12.9999"},
+{kostenst:"V80001751",kkrs:"1010",bukr:"8017",kart:"E",verantwortlicher:"S. Pellegrini",verantwben:"PELLEGSI",kurztext:"EMC ENGINEERING",sprache:"DE",gueltigab:"01.10.2019",bis:"31.12.9999"},
+{kostenst:"V80001752",kkrs:"1010",bukr:"8017",kart:"E",verantwortlicher:"S. Maiocchi",verantwben:"MAIOCCSI",kurztext:"EMS COMPONENT ENGINE",sprache:"DE",gueltigab:"01.09.2023",bis:"31.12.9999"}
+];
+
+data.forEach((d,i)=>{
+  d._idx = i;
+  if(d.aktiv === undefined) d.aktiv = true;
+  if(d.neuerVerantw === undefined) d.neuerVerantw = '';
+  if(d.neuerKkrs === undefined) d.neuerKkrs = '';
+});
+
+// Spaltendefinition: type 'text' = Freitextfilter, 'select' = Dropdown, 'boolselect' = Ja/Nein/Alle
+const columns = [
+  {key:'kostenst', type:'text'},
+  {key:'kkrs', type:'select'},
+  {key:'bukr', type:'select'},
+  {key:'kart', type:'select'},
+  {key:'verantwortlicher', type:'select'},
+  {key:'verantwben', type:'text'},
+  {key:'kurztext', type:'text'},
+  {key:'sprache', type:'select'},
+  {key:'gueltigab', type:'text'},
+  {key:'bis', type:'text'},
+  {key:'aktiv', type:'boolselect'},
+  {key:'neuerVerantw', type:'text'},
+  {key:'neuerKkrs', type:'text'}
+];
+
+const colFilters = {};
+columns.forEach(c=>colFilters[c.key] = '');
+
+let sortKey = null;
+let sortDir = 1;
+
+const tbody = document.getElementById('tbody');
+const countEl = document.getElementById('count');
+const filterRow = document.getElementById('filterRow');
+
+function buildFilterRow(){
+  filterRow.innerHTML = '';
+  columns.forEach(col=>{
+    const th = document.createElement('th');
+    if(col.type === 'text'){
+      th.innerHTML = `<input type="text" data-key="${col.key}" placeholder="Filter...">`;
+    } else if(col.type === 'select'){
+      const values = [...new Set(data.map(d=>d[col.key]).filter(v=>v !== ''))].sort();
+      let opts = '<option value="">Alle</option>';
+      values.forEach(v=>{ opts += `<option value="${v}">${v}</option>`; });
+      th.innerHTML = `<select data-key="${col.key}">${opts}</select>`;
+    } else if(col.type === 'boolselect'){
+      th.innerHTML = `<select data-key="${col.key}">
+        <option value="">Alle</option>
+        <option value="ja">Ja</option>
+        <option value="nein">Nein</option>
+      </select>`;
+    }
+    filterRow.appendChild(th);
+  });
+
+  filterRow.querySelectorAll('input, select').forEach(el=>{
+    const evt = el.tagName === 'SELECT' ? 'change' : 'input';
+    el.addEventListener(evt, ()=>{
+      colFilters[el.dataset.key] = el.value.trim().toLowerCase();
+      render();
+    });
+  });
+}
+
+function render(){
+  let rows = data.filter(d=>{
+    for(const col of columns){
+      const f = colFilters[col.key];
+      if(!f) continue;
+      if(col.key === 'aktiv'){
+        const val = d.aktiv ? 'ja' : 'nein';
+        if(val !== f) return false;
+      } else if(col.type === 'select'){
+        if(String(d[col.key]).toLowerCase() !== f) return false;
+      } else {
+        if(!String(d[col.key]).toLowerCase().includes(f)) return false;
+      }
+    }
+    return true;
+  });
+
+  if(sortKey){
+    rows = rows.slice().sort((a,b)=>{
+      let va = a[sortKey], vb = b[sortKey];
+      if(sortKey === 'aktiv'){ va = va ? 1 : 0; vb = vb ? 1 : 0; }
+      if(va < vb) return -1*sortDir;
+      if(va > vb) return 1*sortDir;
+      return 0;
+    });
+  }
+
+  tbody.innerHTML = '';
+  if(rows.length === 0){
+    tbody.innerHTML = '<tr><td colspan="13" class="no-results">Keine Treffer</td></tr>';
+  } else {
+    rows.forEach(d=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${d.kostenst}</td>
+        <td>${d.kkrs}</td>
+        <td>${d.bukr}</td>
+        <td class="kart-${d.kart}" title="${kartLegend[d.kart] || d.kart}">${d.kart}</td>
+        <td>${d.verantwortlicher}</td>
+        <td>${d.verantwben}</td>
+        <td>${d.kurztext}</td>
+        <td>${d.sprache}</td>
+        <td>${d.gueltigab}</td>
+        <td>${d.bis}</td>
+        <td style="text-align:center;"><input type="checkbox" class="aktiv-cb" data-idx="${d._idx}" ${d.aktiv?'checked':''}></td>
+        <td><input type="text" class="edit-input neuerverantw-input" data-idx="${d._idx}" placeholder="neuer Name" value="${d.neuerVerantw}"></td>
+        <td><input type="text" class="edit-input neuerkkrs-input" data-idx="${d._idx}" placeholder="korrekter KKrs" value="${d.neuerKkrs}" title="Falls der KKrs nicht mehr stimmt: korrekten Kostenrechnungskreis hier eintragen."></td>
+      `;
+      if(!d.aktiv){ tr.style.opacity = '0.5'; tr.style.textDecoration = 'line-through'; }
+      tbody.appendChild(tr);
+    });
+  }
+
+  countEl.textContent = `${rows.length} von ${data.length} Einträgen`;
+}
+
+tbody.addEventListener('change', (e)=>{
+  const idx = e.target.dataset.idx;
+  if(idx === undefined) return;
+  const d = data[idx];
+  if(e.target.classList.contains('aktiv-cb')){
+    d.aktiv = e.target.checked;
+    const tr = e.target.closest('tr');
+    tr.style.opacity = d.aktiv ? '1' : '0.5';
+    tr.style.textDecoration = d.aktiv ? 'none' : 'line-through';
+    scheduleSave();
+  }
+});
+
+tbody.addEventListener('input', (e)=>{
+  const idx = e.target.dataset.idx;
+  if(idx === undefined) return;
+  if(e.target.classList.contains('neuerverantw-input')){
+    data[idx].neuerVerantw = e.target.value;
+    scheduleSave();
+  }
+  if(e.target.classList.contains('neuerkkrs-input')){
+    data[idx].neuerKkrs = e.target.value;
+    scheduleSave();
+  }
+});
+
+document.querySelectorAll('thead th[data-key]').forEach(th=>{
+  th.addEventListener('click', ()=>{
+    const key = th.getAttribute('data-key');
+    if(sortKey === key){
+      sortDir *= -1;
+    } else {
+      sortKey = key;
+      sortDir = 1;
+    }
+    document.querySelectorAll('th .arrow').forEach(a=>a.textContent='');
+    th.querySelector('.arrow').textContent = sortDir === 1 ? '▲' : '▼';
+    render();
+  });
+});
+
+buildFilterRow();
+render();
+
+// --- Menü Toggle ---
+const menuBtn = document.getElementById('menuBtn');
+const syncPanel = document.getElementById('syncPanel');
+menuBtn.addEventListener('click', (e)=>{
+  e.stopPropagation();
+  syncPanel.classList.toggle('open');
+});
+document.addEventListener('click', (e)=>{
+  if(!syncPanel.contains(e.target) && e.target !== menuBtn){
+    syncPanel.classList.remove('open');
+  }
+});
+
+// --- Google Sheet Sync ---
+const sheetUrlEl = document.getElementById('sheetUrl');
+const connectBtn = document.getElementById('connectBtn');
+const reloadBtn = document.getElementById('reloadBtn');
+const syncStatusEl = document.getElementById('syncStatus');
+
+let saveTimer = null;
+
+function setStatus(text, cls){
+  syncStatusEl.textContent = text;
+  syncStatusEl.className = 'sync-status' + (cls ? ' ' + cls : '');
+}
+
+function getUrl(){
+  return sheetUrlEl.value.trim();
+}
+
+async function loadFromSheet(){
+  const url = getUrl();
+  if(!url){ setStatus('keine URL hinterlegt', 'error'); return; }
+  setStatus('lade...', 'busy');
+  try{
+    const res = await fetch(url, { method:'GET' });
+    const json = await res.json();
+    if(Array.isArray(json) && json.length > 0){
+      data.length = 0;
+      json.forEach((d,i)=>{
+        d._idx = i;
+        if(d.aktiv === undefined) d.aktiv = true;
+        if(d.neuerVerantw === undefined) d.neuerVerantw = '';
+        if(d.neuerKkrs === undefined) d.neuerKkrs = '';
+        data.push(d);
+      });
+      buildFilterRow();
+      render();
+      setStatus('geladen aus Sheet', 'ok');
+    } else {
+      setStatus('Sheet ist leer, initiale Daten hochgeladen', 'ok');
+      await saveToSheet();
+    }
+  } catch(err){
+    setStatus('Fehler beim Laden: ' + err.message, 'error');
+  }
+}
+
+async function saveToSheet(){
+  const url = getUrl();
+  if(!url) return;
+  setStatus('speichere...', 'busy');
+  try{
+    await fetch(url, {
+      method:'POST',
+      headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+      body: JSON.stringify(data)
+    });
+    setStatus('gespeichert ' + new Date().toLocaleTimeString('de-CH'), 'ok');
+  } catch(err){
+    setStatus('Fehler beim Speichern: ' + err.message, 'error');
+  }
+}
+
+function scheduleSave(){
+  clearTimeout(saveTimer);
+  setStatus('Änderung, speichere gleich...', 'busy');
+  saveTimer = setTimeout(saveToSheet, 800);
+}
+
+connectBtn.addEventListener('click', ()=>{
+  const url = getUrl();
+  if(url) localStorage.setItem('kostenstellen_sheet_url', url);
+  loadFromSheet();
+});
+
+reloadBtn.addEventListener('click', loadFromSheet);
+
+const savedUrl = localStorage.getItem('kostenstellen_sheet_url');
+if(savedUrl){
+  sheetUrlEl.value = savedUrl;
+}
+loadFromSheet();
+</script>
+
+</body>
+</html>
